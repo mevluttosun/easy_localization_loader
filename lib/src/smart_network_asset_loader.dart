@@ -86,18 +86,18 @@ class SmartNetworkAssetLoader extends AssetLoader {
   Future<String> loadFromNetwork(String localeName) async {
     String url = localeUrl(localeName);
 
-    url = url + '' + localeName + '.json';
+    // url = url + '' + localeName + '.json';
 
     try {
       final response =
           await Future.any([http.get(Uri.parse(url)), Future.delayed(timeout)]);
-
+      print('translation response: $response');
       if (response != null && response.statusCode == 200) {
         var content = utf8.decode(response.bodyBytes);
 
         // check valid json before saving it
         if (json.decode(content) != null) {
-          await saveTranslation(localeName, content);
+          saveTranslation(localeName, content);
           return content;
         }
       }
@@ -154,3 +154,4 @@ class SmartNetworkAssetLoader extends AssetLoader {
     return File(await getFilenameForLocale(localeName));
   }
 }
+
