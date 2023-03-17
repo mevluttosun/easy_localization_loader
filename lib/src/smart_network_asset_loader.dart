@@ -42,9 +42,11 @@ class SmartNetworkAssetLoader extends AssetLoader {
     }
 
     // no local or failed, check if internet and download the file
-    if (string == '' && await isInternetConnectionAvailable()) {
-      string = await loadFromNetwork(locale.toString());
-    }
+    Future.delayed(Duration(seconds: 0), () async {
+      if (string == '' && await isInternetConnectionAvailable()) {
+        string = await loadFromNetwork(locale.toString());
+      }
+    });
 
     // local cache duration was reached or no internet access but prefer local file to assets
     if (string == '' &&
@@ -89,15 +91,14 @@ class SmartNetworkAssetLoader extends AssetLoader {
     // url = url + '' + localeName + '.json';
 
     try {
-      final response =
-          await Future.any([http.get(Uri.parse(url)), Future.delayed(timeout)]);
+      final response = await http.get(Uri.parse(url));
       print('translation response: $response');
       if (response != null && response.statusCode == 200) {
         var content = utf8.decode(response.bodyBytes);
 
         // check valid json before saving it
         if (json.decode(content) != null) {
-          saveTranslation(localeName, content);
+          await saveTranslation(localeName, content);
           return content;
         }
       }
@@ -154,4 +155,3 @@ class SmartNetworkAssetLoader extends AssetLoader {
     return File(await getFilenameForLocale(localeName));
   }
 }
-
