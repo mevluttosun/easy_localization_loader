@@ -25,31 +25,42 @@ class SmartNetworkAssetLoader extends AssetLoader {
 
   final Duration localCacheDuration;
 
+  final String localSeperator;
+
   SmartNetworkAssetLoader(
       {required this.localeUrl,
       this.timeout = const Duration(seconds: 30),
       required this.assetsPath,
-      this.localCacheDuration = const Duration(days: 1)});
+      this.localCacheDuration = const Duration(days: 1),
+      this.localSeperator = "_"});
 
   @override
-  Future<Map<String, dynamic>> load(String localePath, Locale locale) async {
+  Future<Map<String, dynamic>> load(
+    String localePath,
+    Locale locale,
+  ) async {
     var string = '';
 
     // try loading local previously-saved localization file
-    if (await localTranslationExists(locale.toString())) {
-      string = await loadFromLocalFile(locale.toString());
+    if (await localTranslationExists(
+        locale.toStringWithSeparator(separator: localSeperator))) {
+      string = await loadFromLocalFile(
+          locale.toStringWithSeparator(separator: localSeperator));
     }
 
     // no local or failed, check if internet and download the file
     if (string == '' && await isInternetConnectionAvailable()) {
-      string = await loadFromNetwork(locale.toString());
+      string = await loadFromNetwork(
+          locale.toStringWithSeparator(separator: localSeperator));
     }
 
     // local cache duration was reached or no internet access but prefer local file to assets
     if (string == '' &&
-        await localTranslationExists(locale.toString(),
+        await localTranslationExists(
+            locale.toStringWithSeparator(separator: localSeperator),
             ignoreCacheDuration: true)) {
-      string = await loadFromLocalFile(locale.toString());
+      string = await loadFromLocalFile(
+          locale.toStringWithSeparator(separator: localSeperator));
     }
 
     // still nothing? Load from assets
