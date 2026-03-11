@@ -50,8 +50,7 @@ class SmartNetworkAssetLoader extends AssetLoader {
 
     // no local or failed, check if internet and download the file
     if (string == '' && await isInternetConnectionAvailable()) {
-      string = await loadFromNetwork(
-          locale.toStringWithSeparator(separator: localSeperator));
+      loadFromNetwork(locale.toStringWithSeparator(separator: localSeperator));
     }
 
     // local cache duration was reached or no internet access but prefer local file to assets
@@ -65,7 +64,8 @@ class SmartNetworkAssetLoader extends AssetLoader {
 
     // still nothing? Load from assets
     if (string == '') {
-      string = await rootBundle.loadString('$assetsPath/$locale.json');
+      string = await rootBundle.loadString(
+          '$assetsPath/${locale.toStringWithSeparator(separator: localSeperator)}.json');
     }
 
     // then returns the json file
