@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
@@ -40,35 +41,31 @@ class SmartNetworkAssetLoader extends AssetLoader {
     Locale locale,
   ) async {
     var string = '';
+    final localeName = locale.toStringWithSeparator(separator: localSeperator);
 
-    // try loading local previously-saved localization file
-    if (await localTranslationExists(
-        locale.toStringWithSeparator(separator: localSeperator))) {
-      string = await loadFromLocalFile(
-          locale.toStringWithSeparator(separator: localSeperator));
+    // 1. Try a previously-saved local file (within cache duration)
+    if (await localTranslationExists(localeName)) {
+      string = await loadFromLocalFile(localeName);
     }
 
-    // no local or failed, check if internet and download the file
+    // 2. No valid cache — try the network
     if (string == '' && await isInternetConnectionAvailable()) {
-      loadFromNetwork(locale.toStringWithSeparator(separator: localSeperator));
+      string = await loadFromNetwork(localeName);
     }
 
-    // local cache duration was reached or no internet access but prefer local file to assets
+    // 3. Cache expired or no internet — fall back to any local file
     if (string == '' &&
-        await localTranslationExists(
-            locale.toStringWithSeparator(separator: localSeperator),
-            ignoreCacheDuration: true)) {
-      string = await loadFromLocalFile(
-          locale.toStringWithSeparator(separator: localSeperator));
+        await localTranslationExists(localeName, ignoreCacheDuration: true)) {
+      string = await loadFromLocalFile(localeName);
     }
 
-    // still nothing? Load from assets
+    // 4. Nothing local or remote — load from bundled assets.
+    //    Use the same separator as above so the filename matches what is
+    //    actually in assets/translations/ (e.g. "en-US.json", not "en_US.json").
     if (string == '') {
-      string = await rootBundle.loadString(
-          '$assetsPath/${locale.toStringWithSeparator(separator: localSeperator)}.json');
+      string = await rootBundle.loadString('$assetsPath/$localeName.json');
     }
 
-    // then returns the json file
     return json.decode(string);
   }
 
@@ -78,17 +75,18 @@ class SmartNetworkAssetLoader extends AssetLoader {
     final connectivityResult = await Connectivity().checkConnectivity();
     if (connectivityResult.contains(ConnectivityResult.none)) {
       return false;
-    } else {
-      try {
-        final result = await InternetAddress.lookup('google.com');
-        if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
-          return true;
-        }
-      } on SocketException catch (_) {
-        return false;
-      }
     }
-
+    try {
+      final result = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(seconds: 3));
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        return true;
+      }
+    } on SocketException catch (_) {
+      return false;
+    } on TimeoutException catch (_) {
+      return false;
+    }
     return false;
   }
 
